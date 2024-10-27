@@ -2,7 +2,7 @@
 Let's communicate with LLMs using RAG (Retrieval-Augmented Generation), as it makes life easier! Chat with Author is an application where the user uploads a PDF and asks questions related to its content. Here, the LLM acts as the author, providing responses to the user's queries.
 ---
 ## Table of Contents
-
+- [Model details](#Model)
 - [Features](#features)
 - [Getting Started](#getting-started)
 - [Installation](#installation)
@@ -10,7 +10,9 @@ Let's communicate with LLMs using RAG (Retrieval-Augmented Generation), as it ma
 - [Commands](#commands)
 - [Contributing](#contributing)
 - [License](#license)
-
+## Model details
+   Download LLama2-7b model from hugging face 
+   download link : https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
 ## Features
 
 - Upload PDFs and query document content.
@@ -98,10 +100,5 @@ Here are some basic commands to help you get started:
 
 Feel free to contribute to this project by submitting a pull request. For significant changes, please open an issue first to discuss your ideas.
 
-## License
 
-This project is licensed under the MIT License.
 
----
-
-Customize the commands and sections to match your specific setup and requirements! Let me know if there’s any particular command or instruction you’d like to add.
