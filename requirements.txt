@@ -1,0 +1,13 @@
+sentence-transformers
+uvicorn
+ctransformers
+langchain
+python-box
+streamlit
+flask
+flask-cors
+langchain
+langchain-community
+googletrans
+langchain_google_genai
+PyPDF2

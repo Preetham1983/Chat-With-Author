@@ -1,0 +1,151 @@
+/* Base styles */
+.query-form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
+  width: 90%;
+  max-width: 400px; /* Adjust maximum width as needed */
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.query-form {
+  width: 90%;
+  max-width: 400px; /* Adjust form width */
+  background-color: #ffffff; /* White background */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.query-form input[type="text"] {
+  width: 95%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.query-form button[type="submit"] {
+  width: 100%;
+  background-color: orange; /* Green button */
+  color: black;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.query-form button[type="submit"]:hover {
+  background-color: lightcoral; /* Darker green on hover */
+}
+
+.query-response {
+  margin-top: 45px;
+  padding: 20px;
+  background-color: whitesmoke; /* Light blue background */
+  border-radius: 8px;
+  font-size: 18px;
+}
+
+.query-response button {
+  display: inline-block;
+  background-color: #4caf50; /* Green button */
+  color: white;
+  padding: 15px 30px; /* Adjust padding for button size */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  text-transform: uppercase;
+  transition: background-color 0.3s ease;
+  margin-top: 20px; /* Adjust margin for spacing */
+}
+
+
+
+.processing-message {
+  color: gray;
+}
+
+.language-selection {
+  display: flex;
+  align-items: center; /* Center align items vertically */
+  margin-top: 10px; /* Add margin on top for spacing */
+}
+
+.language-selection select {
+  width: 200px; /* Adjust the width as needed */
+  margin-right: 10px; /* Add margin to the right of the select */
+  padding: 8px; /* Add padding inside the select */
+}
+
+.language-selection button {
+  padding: 8px 16px; /* Add padding inside the button */
+  background-color: #4CAF50; /* Green background color */
+  color: white; /* White text color */
+  border: none; /* Remove border */
+  cursor: pointer; /* Add pointer cursor on hover */
+  transition: background-color 0.3s; /* Smooth background color transition */
+}
+
+.language-selection button:hover {
+  background-color: #45a049; /* Darker green on hover */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .query-form {
+    padding: 15px;
+  }
+
+  .query-form input[type="text"] {
+    padding: 10px;
+  }
+
+  .query-form button[type="submit"] {
+    padding: 10px;
+  }
+
+  .language-selection select {
+    width: 150px;
+  }
+
+  .language-selection button {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .query-form {
+    max-width: 100%;
+  }
+
+  .language-selection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .language-selection select {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .language-selection button {
+    width: 100%;
+  }
+}
+
+.res{
+  width: 100%;
+  height: fit-content;
+}
+

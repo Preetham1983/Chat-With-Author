@@ -1,0 +1,36 @@
+/* Response.css */
+
+.response-container {
+    width: 100%;
+    max-width: 600px; /* Adjust maximum width as needed */
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .response-container h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  
+  .response-container p {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  
+  .loading {
+    font-size: 20px;
+    text-align: center;
+    margin: 20px;
+  }
+  
+  .error {
+    font-size: 20px;
+    color: red;
+    text-align: center;
+    margin: 20px;
+  }
+  
+  
