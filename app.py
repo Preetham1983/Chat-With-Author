@@ -1,318 +1,9 @@
-# from flask import Flask, request, jsonify
-# import os
-# from PyPDF2 import PdfReader
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-# from langchain_community.vectorstores import FAISS
-# from langchain.chains.question_answering import load_qa_chain
-# from langchain.prompts import PromptTemplate
-# from dotenv import load_dotenv
-# from sklearn.feature_extraction.text import TfidfVectorizer
-# from sklearn.metrics.pairwise import cosine_similarity
-# import nltk
-# from nltk.corpus import stopwords
-# from langchain_community.llms import CTransformers
-# from googletrans import Translator
-# from flask_cors import CORS
-
-# app = Flask(__name__)
-# CORS(app)  # Enable CORS for all routes
-
-# # Load environment variables
-# load_dotenv()
-# google_api_key = os.getenv("GOOGLE_API_KEY")
-# if not google_api_key:
-#     raise ValueError("Google API key not found. Please check your environment variables.")
-
-# # Download stopwords
-# nltk.download('stopwords')
-# stop_words = stopwords.words('english')
-# custom_stopwords = ["what", "is", "how", "who", "explain", "about", "?", "please", "hey", "whatsup", "can u explain"]
-# stop_words.extend(custom_stopwords)
-
-# @app.route('/upload-pdf', methods=['POST'])
-# def upload_pdf():
-#     pdf_files = request.files.getlist('pdf_files')
-#     if not pdf_files:
-#         return jsonify({'error': 'No PDF files uploaded'}), 400
-    
-#     raw_text = get_pdf_text(pdf_files)
-#     text_chunks = get_text_chunks(raw_text)
-#     get_vector_store(text_chunks)
-    
-#     return jsonify({'message': 'PDFs uploaded and processed successfully'}), 200
-
-# @app.route('/process-query', methods=['POST'])
-# def process_query():
-#     data = request.json
-#     if 'user_question' not in data:
-#         return jsonify({'error': 'Missing user_question field'}), 400
-    
-#     user_question = data['user_question']
-#     response_language = data.get('response_language', 'en')
-    
-#     try:
-#         raw_text = get_pdf_text()  # Fetch raw text from wherever it is stored
-        
-#         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-#         new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-#         docs = new_db.similarity_search(user_question)
-        
-#         gemini_chain = get_conversational_chain()
-#         gemini_response = gemini_chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-#         initial_response = gemini_response["output_text"]
-        
-#         similarity_score = calculate_cosine_similarity(raw_text, user_question)
-    
-#         if "The answer is not available in the context" in initial_response or "The provided context does not contain any information" in initial_response:
-#             if similarity_score > 0.00125:
-#                 refined_response = get_llama_response(user_question, no_words=500, blog_style="detailed", response_language="english")
-#             else:
-#                 refined_response = "I'm sorry, I cannot answer this question based on the provided context."
-#         else:
-#             refined_response = get_llama_response(initial_response, no_words=500, blog_style="detailed", response_language="english")
-        
-#         translated_response = translate_text(refined_response, response_language)
-    
-#         return jsonify({'generated_response': translated_response}), 200
-    
-#     except ValueError as ve:
-#         return jsonify({'error': str(ve)}), 400  # Return 400 for client errors
-#     except Exception as e:
-#         app.logger.error(f"Error processing query: {e}")  # Log the error
-#         return jsonify({'error': 'Internal Server Error'}), 500  # Return 500 for server errors
-
-# def get_pdf_text(pdf_files):
-#     text = ""
-#     for pdf in pdf_files:
-#         pdf_reader = PdfReader(pdf)
-#         for page in pdf_reader.pages:
-#             text += page.extract_text() or ""
-#     return text
-
-# def get_text_chunks(text):
-#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
-#     return text_splitter.split_text(text)
-
-# def get_vector_store(text_chunks):
-#     try:
-#         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-#         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-#         vector_store.save_local("faiss_index")
-#     except Exception as e:
-#         print(f"Error during embedding: {e}")
-
-# def get_conversational_chain():
-#     prompt_template = """
-#     Please provide a detailed answer based on the provided context. If the necessary information to answer the question is not present in the context, respond with 'The answer is not available in the context'
-    
-#     Context:
-#     {context}
-    
-#     Question:
-#     {question}
-    
-#     Answer:
-#     """
-#     model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-#     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-#     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-# def get_llama_response(input_text, no_words, blog_style, response_language):
-#     llm = CTransformers(
-#         model='C:/Users/bandi/OneDrive/Desktop/LLama/chat-with-author-backend/models/llama-2-7b-chat.ggmlv3.q8_0.bin',
-#         model_type='llama',
-#         config={'max_new_tokens': 500, 'temperature': 0.01}
-#     )
-#     template = """
-#     Given some information of '{input_text}', provide a concise summary suitable for a {blog_style} blog post in approximately {no_words} words. The total response should be in {response_language} language. Focus on key aspects and provide accurate information.
-#     """
-    
-#     prompt = PromptTemplate(input_variables=["blog_style", "input_text", 'no_words', 'response_language'],
-#                             template=template)
-    
-#     response = llm(prompt.format(input_text=input_text, no_words=no_words, blog_style=blog_style, response_language=response_language))
-#     return response
-
-# def calculate_cosine_similarity(raw_text, user_question):
-#     vectorizer = TfidfVectorizer(stop_words=list(stop_words))
-#     tfidf_matrix = vectorizer.fit_transform([raw_text, user_question])
-#     cos_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-#     return cos_similarity
-
-# def translate_text(text, dest_language):
-#     translator = Translator()
-#     translation = translator.translate(text, dest=dest_language)
-#     return translation.text
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-# from flask import Flask, request, jsonify
-# import os
-# from PyPDF2 import PdfReader
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-# from langchain_community.vectorstores import FAISS
-# from langchain.chains.question_answering import load_qa_chain
-# from langchain.prompts import PromptTemplate
-# from dotenv import load_dotenv
-# from sklearn.feature_extraction.text import TfidfVectorizer
-# from sklearn.metrics.pairwise import cosine_similarity
-# import nltk
-# from nltk.corpus import stopwords
-# from langchain_community.llms import CTransformers
-# from googletrans import Translator
-# from flask_cors import CORS
-
-# app = Flask(__name__)
-# CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes
-
-# # Load environment variables
-# load_dotenv()
-# google_api_key = os.getenv("GOOGLE_API_KEY")
-# if not google_api_key:
-#     raise ValueError("Google API key not found. Please check your environment variables.")
-
-# # Download stopwords
-# nltk.download('stopwords')
-# stop_words = stopwords.words('english')
-# custom_stopwords = ["what", "is", "how", "who", "explain", "about", "?", "please", "hey", "whatsup", "can u explain"]
-# stop_words.extend(custom_stopwords)
-
-# # Variable to store extracted text globally (not recommended for production, use a database or file storage)
-# global_raw_text = ""
-
-# @app.route('/upload-pdf', methods=['POST'])
-# def upload_pdf():
-#     global global_raw_text
-    
-#     pdf_files = request.files.getlist('pdf_files')
-#     if not pdf_files:
-#         return jsonify({'error': 'No PDF files uploaded'}), 400
-    
-#     raw_text = get_pdf_text(pdf_files)
-#     global_raw_text = raw_text  # Store raw text globally for use in queries
-#     text_chunks = get_text_chunks(raw_text)
-#     get_vector_store(text_chunks)
-    
-#     return jsonify({'message': 'PDFs uploaded and processed successfully'}), 200
-
-# @app.route('/process-query', methods=['POST'])
-# def process_query():
-#     data = request.json
-#     if 'user_question' not in data:
-#         return jsonify({'error': 'Missing user_question field'}), 400
-    
-#     user_question = data['user_question']
-   
-    
-#     try:
-#         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-#         new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-#         docs = new_db.similarity_search(user_question)
-        
-#         global global_raw_text
-#         global_raw_text = global_raw_text.strip()  # Ensure raw text is clean and stripped
-#         similarity_score = calculate_cosine_similarity(global_raw_text, user_question)
-        
-#         gemini_chain = get_conversational_chain()
-#         gemini_response = gemini_chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-#         initial_response = gemini_response["output_text"]
-        
-#     except Exception as e:
-#         initial_response = f"Error: {str(e)}"  # Log the specific error for debugging
-    
-#     if "The answer is not available in the context" in initial_response or "The provided context does not contain any information" in initial_response:
-#         if similarity_score > 0.00125:  # Adjust this threshold as needed
-#             refined_response = get_llama_response(user_question, no_words=500, blog_style="detailed")
-#         else:
-#             refined_response = ""
-#     else:
-#         refined_response = get_llama_response(initial_response, no_words=500, blog_style="detailed")
-    
-   
-    
-#     return jsonify({'generated_response': refined_response}), 200
-
-
-# def get_pdf_text(pdf_files):
-#     text = ""
-#     for pdf in pdf_files:
-#         pdf_reader = PdfReader(pdf)
-#         for page in pdf_reader.pages:
-#             text += page.extract_text() or ""
-#     return text
-
-# def get_text_chunks(text):
-#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
-#     return text_splitter.split_text(text)
-
-# def get_vector_store(text_chunks):
-#     try:
-#         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-#         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-#         vector_store.save_local("faiss_index")
-#     except Exception as e:
-#         print(f"Error during embedding: {e}")
-
-# def get_conversational_chain():
-#     prompt_template = """
-#     Please provide a detailed answer based on the provided context. If the necessary information to answer the question is not present in the context, respond with 'The answer is not available in the context'
-    
-#     Context:
-#     {context}
-    
-#     Question:
-#     {question}
-    
-#     Answer:
-#     """
-#     model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-#     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-#     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-# def get_llama_response(input_text, no_words, blog_style):
-#     llm = CTransformers(
-#         model='C:/Users/bandi/OneDrive/Desktop/LLama/chat-with-author-backend/models/llama-2-7b-chat.ggmlv3.q8_0.bin',
-#         model_type='llama',
-#         config={'max_new_tokens': 500, 'temperature': 0.01}
-#     )
-#     template = """
-#           Given some information of '{input_text}', provide a concise summary suitable for a {blog_style} blog post in approximately {no_words} words. Focus on key aspects and provide accurate information.
-#     """
-    
-#     prompt = PromptTemplate(input_variables=["blog_style", "input_text", 'no_words'],
-#                             template=template)
-    
-#     response = llm(prompt.format(input_text=input_text, no_words=no_words, blog_style=blog_style))
-#     return response
-
-# def calculate_cosine_similarity(text, user_question):
-#     vectorizer = TfidfVectorizer(stop_words=list(stop_words))
-#     tfidf_matrix = vectorizer.fit_transform([text, user_question])
-#     cos_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-#     return cos_similarity
-
-
-
-# if __name__ == '__main__':
-#     app.run(debug=False)
-
-
-
-
-
-
-
-
 from flask import Flask, request, jsonify
 import os
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_community.embeddings import HuggingFaceEmbeddings  # HuggingFace Embeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -320,168 +11,193 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 from langchain_community.llms import CTransformers
-from googletrans import Translator
 from flask_cors import CORS
 from pymongo import MongoClient
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Load environment variables
+# --- Configuration and Initialization ---
 load_dotenv()
-google_api_key = os.getenv("GOOGLE_API_KEY")
-if not google_api_key:
-    raise ValueError("Google API key not found. Please check your environment variables.")
 
-# Download stopwords
-nltk.download('stopwords')
-stop_words = stopwords.words('english')
+try:
+    stopwords.words('english')
+except LookupError:
+    nltk.download('stopwords')
+
+stop_words = set(stopwords.words('english'))
 custom_stopwords = ["what", "is", "how", "who", "explain", "about", "?", "please", "hey", "whatsup", "can u explain"]
-stop_words.extend(custom_stopwords)
+stop_words.update(custom_stopwords)
 
-
+# Database connection
 mongo_uri = os.getenv("MONGO_URI")
 if not mongo_uri:
-    raise ValueError("MongoDB URI not found. Please check your environment variables.")
-client = MongoClient(mongo_uri)
-db = client['pdf_database']
-collection = db['text_chunks']
-
+    raise ValueError("MongoDB URI not found. Please set the MONGO_URI environment variable.")
+try:
+    client = MongoClient(mongo_uri)
+    db = client['pdf_database']
+    collection = db['text_chunks']
+    client.server_info()
+    print("Successfully connected to MongoDB.")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
+    exit()
 
 global_raw_text = ""
+FAISS_INDEX_PATH = "C:/Users/bandi/OneDrive/Desktop/LLama/chat-with-author-backend/faiss_index"
 
-@app.route('/upload-pdf', methods=['POST'])
-# def upload_pdf():
-#     global global_raw_text
-    
-#     pdf_files = request.files.getlist('pdf_files')
-#     if not pdf_files:
-#         return jsonify({'error': 'No PDF files uploaded'}), 400
-    
-#     raw_text = get_pdf_text(pdf_files)
-#     global_raw_text = raw_text
-#     text_chunks = get_text_chunks(raw_text)
-#     get_vector_store(text_chunks)
-    
-#     return jsonify({'message': 'PDFs uploaded and processed successfully'}), 200
-def upload_pdf():
-    global global_raw_text
+# Initialize HuggingFace Embeddings
+print("Initializing HuggingFace embedding model...")
+try:
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    print("HuggingFace embedding model loaded.")
+except Exception as e:
+    print(f"Error initializing HuggingFace embedding model: {e}")
+    embeddings = None
+    exit()
 
-    pdf_files = request.files.getlist('pdf_files')
-    if not pdf_files:
-        return jsonify({'error': 'No PDF files uploaded'}), 400
+# Initialize local LLM (Llama 2 or your Llama 3 path)
+print("Initializing local LLM...")
+try:
+    llm = CTransformers(
+        model='C:/Users/bandi/OneDrive/Desktop/LLama/chat-with-author-backend/models/llama-2-7b-chat.ggmlv3.q8_0.bin',  # Change if you have llama3 weights
+        model_type='llama',
+        config={'max_new_tokens': 512, 'temperature': 0.1, 'context_length': 2500}
+    )
+    print("LLM loaded successfully.")
+except Exception as e:
+    print(f"Error loading local LLM: {e}")
+    llm = None
 
-    raw_text = get_pdf_text(pdf_files)
-    global_raw_text = raw_text
-    text_chunks = get_text_chunks(raw_text)
-    
-    # Store text chunks in MongoDB
-    store_chunks_in_mongodb(text_chunks)
-    
-    # Process vector store
-    get_vector_store(text_chunks)
-    
-    return jsonify({'message': 'PDF processed and text chunks stored'}), 200
+# --- Helper functions ---
+
+def get_pdf_text(pdf_files):
+    text = ""
+    for pdf in pdf_files:
+        try:
+            pdf_reader = PdfReader(pdf)
+            for page in pdf_reader.pages:
+                text += page.extract_text() or ""
+        except Exception as e:
+            print(f"Error reading PDF file {pdf.filename}: {e}")
+    return text
+
+def get_text_chunks(text):
+    splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000, length_function=len)
+    return splitter.split_text(text)
+
+def create_and_save_vector_store(text_chunks):
+    if not text_chunks:
+        print("No text chunks to process for vector store.")
+        return
+    if not embeddings:
+        print("Embedding model not available.")
+        return
+    try:
+        print("Creating vector store from text chunks...")
+        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+        vector_store.save_local(FAISS_INDEX_PATH)
+        print(f"Vector store created and saved to '{FAISS_INDEX_PATH}'.")
+    except Exception as e:
+        print(f"Error creating vector store: {e}")
 
 def store_chunks_in_mongodb(chunks):
-    documents = [{"chunk": chunk} for chunk in chunks]
-    collection.insert_many(documents)
+    if not chunks:
+        print("No chunks to store.")
+        return
+    try:
+        collection.delete_many({})
+        collection.insert_many([{"text": c} for c in chunks])
+        print(f"Inserted {len(chunks)} chunks into MongoDB.")
+    except Exception as e:
+        print(f"Error storing in MongoDB: {e}")
+
+def get_llama_response(question, context=""):
+    if not llm:
+        return "LLM is not available."
+    template = """
+    Use the following pieces of information to answer the user's question.
+    If you don't know the answer, just say that you don't know, don't try to make up an answer.
+
+    Context: {context}
+    Question: {question}
+
+    Only return the helpful answer below and nothing else.
+    Helpful answer:
+    """
+    prompt = PromptTemplate(template=template, input_variables=['context', 'question'])
+    formatted = prompt.format(context=context, question=question)
+    return llm(formatted)
+
+def calculate_cosine_similarity(text, question):
+    if not text or not question:
+        return 0.0
+    try:
+        vectorizer = TfidfVectorizer(stop_words=list(stop_words))
+        matrix = vectorizer.fit_transform([text, question])
+        return cosine_similarity(matrix[0:1], matrix[1:2])[0][0]
+    except ValueError:
+        return 0.0
+
+# --- Flask routes ---
+
+@app.route('/upload-pdf', methods=['POST'])
+def upload_pdf():
+    global global_raw_text
+    if 'pdf_files' not in request.files:
+        return jsonify({"error": "No file part in the request"}), 400
+    pdf_files = request.files.getlist('pdf_files')
+    if not pdf_files or pdf_files[0].filename == '':
+        return jsonify({"error": "No PDF files selected"}), 400
+
+    print("Processing uploaded PDFs...")
+    raw_text = get_pdf_text(pdf_files)
+    global_raw_text = raw_text
+
+    chunks = get_text_chunks(raw_text)
+    store_chunks_in_mongodb(chunks)
+    create_and_save_vector_store(chunks)
+
+    return jsonify({"message": f"Successfully processed {len(pdf_files)} PDF(s). Index is ready."}), 200
 
 @app.route('/process-query', methods=['POST'])
 def process_query():
     data = request.json
     if 'user_question' not in data:
-        return jsonify({'error': 'Missing user_question field'}), 400
-    
+        return jsonify({"error": "Missing user_question field"}), 400
+
     user_question = data['user_question']
-   
+    print(f"Query: {user_question}")
+
+    if not os.path.exists(FAISS_INDEX_PATH):
+        return jsonify({"error": "Vector store not found. Please upload a PDF first."}), 400
+    if not embeddings:
+        return jsonify({"error": "Embedding model not available."}), 500
+
     try:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-        docs = new_db.similarity_search(user_question)
-        
-        global global_raw_text
-        global_raw_text = global_raw_text.strip()  # Ensure raw text is clean and stripped
-        similarity_score = calculate_cosine_similarity(global_raw_text, user_question)
-        
-        gemini_chain = get_conversational_chain()
-        gemini_response = gemini_chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-        initial_response = gemini_response["output_text"]
-        
+        print("Loading FAISS index...")
+        db = FAISS.load_local(FAISS_INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
+
+        print("Searching close matches...")
+        similar_docs = db.similarity_search(user_question, k=3)
+        context = " ".join(doc.page_content for doc in similar_docs)
+
+        if not context.strip():
+            print("No relevant context found.")
+            score = calculate_cosine_similarity(global_raw_text, user_question)
+            if score > 0.1:
+                return jsonify({"generated_response": "Found some related info, but couldn't pinpoint an exact answer. Please rephrase your question."}), 200
+            else:
+                return jsonify({"generated_response": "No answer found in the provided PDF."}), 200
+
+        print("Generating response from local LLM...")
+        answer = get_llama_response(user_question, context=context)
+        return jsonify({"generated_response": answer}), 200
+
     except Exception as e:
-        initial_response = f"Error: {str(e)}" 
-    
-    if "The answer is not available in the context" in initial_response or "The provided context does not contain any information" in initial_response:
-        if similarity_score > 0.00125:  # Adjust this threshold as needed
-            refined_response = get_llama_response(user_question, no_words=500, blog_style="detailed")
-        else:
-            refined_response = "The question is not related to the pdf...."
-    else:
-        refined_response = get_llama_response(initial_response, no_words=500, blog_style="detailed")
-    
-    return jsonify({'generated_response': refined_response}), 200
-
-
-
-
-def get_pdf_text(pdf_files):
-    text = ""
-    for pdf in pdf_files:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text() or ""
-    return text
-
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
-    return text_splitter.split_text(text)
-
-def get_vector_store(text_chunks):
-    try:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-        vector_store.save_local("faiss_index")
-    except Exception as e:
-        print(f"Error during embedding: {e}")
-
-def get_conversational_chain():
-    prompt_template = """
-    Please provide a detailed answer based on the provided context. If the necessary information to answer the question is not present in the context, respond with 'The answer is not available in the context'
-    
-    Context:
-    {context}
-    
-    Question:
-    {question}
-    
-    Answer:
-    """
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    return load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-def get_llama_response(input_text, no_words, blog_style):
-    llm = CTransformers(
-        model='C:/Users/bandi/OneDrive/Desktop/os/LLama/chat-with-author-backend/models/llama-2-7b-chat.ggmlv3.q8_0.bin',
-        model_type='llama',
-        config={'max_new_tokens': 500, 'temperature': 0.01}
-    )
-    template="""
-          Given some information of '{input_text}', provide a concise summary suitable for a {blog_style} blog post in approximately {no_words} words. Focus on key aspects and provide accurate information.
-    """
-    
-    prompt = PromptTemplate(input_variables=["blog_style", "input_text", 'no_words'],
-                            template=template)
-    
-    response = llm(prompt.format(input_text=input_text, no_words=no_words, blog_style=blog_style))
-    return response
-
-def calculate_cosine_similarity(text, user_question):
-    vectorizer = TfidfVectorizer(stop_words=list(stop_words))
-    tfidf_matrix = vectorizer.fit_transform([text, user_question])
-    cos_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    return cos_similarity
-
+        print(f"Query processing error: {e}")
+        return jsonify({"error": f"Internal error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    # Before running, install sentence-transformers package: pip install sentence-transformers
+    app.run(host='0.0.0.0', port=5000, debug=False)
